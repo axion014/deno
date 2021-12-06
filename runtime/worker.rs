@@ -210,13 +210,15 @@ impl MainWorker {
     tokio::select! {
       maybe_result = &mut receiver => {
         debug!("received module evaluate {:#?}", maybe_result);
-        maybe_result.expect("Module evaluation result not provided.")
+        maybe_result.expect("Module evaluation result not provided.")?;
+        Ok(())
       }
 
       event_loop_result = self.run_event_loop(false) => {
         event_loop_result?;
         let maybe_result = receiver.await;
-        maybe_result.expect("Module evaluation result not provided.")
+        maybe_result.expect("Module evaluation result not provided.")?;
+        Ok(())
       }
     }
   }

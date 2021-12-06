@@ -91,7 +91,7 @@ struct DynImportModEvaluate {
 
 struct ModEvaluate {
   promise: v8::Global<v8::Promise>,
-  sender: oneshot::Sender<Result<(), Error>>,
+  sender: oneshot::Sender<Result<v8::Global<v8::Value>, Error>>,
 }
 
 pub struct CrossIsolateStore<T>(Arc<Mutex<CrossIsolateStoreInner<T>>>);
@@ -1070,7 +1070,7 @@ impl JsRuntime {
   pub fn mod_evaluate(
     &mut self,
     id: ModuleId,
-  ) -> oneshot::Receiver<Result<(), Error>> {
+  ) -> oneshot::Receiver<Result<v8::Global<v8::Value>, Error>> {
     let state_rc = Self::state(self.v8_isolate());
     let module_map_rc = Self::module_map(self.v8_isolate());
     let scope = &mut self.handle_scope();
@@ -1341,9 +1341,10 @@ impl JsRuntime {
         state_rc.borrow_mut().pending_mod_evaluate = Some(module_evaluation);
       }
       v8::PromiseState::Fulfilled => {
+        let value = promise.result(scope);
         scope.perform_microtask_checkpoint();
         // Receiver end might have been already dropped, ignore the result
-        let _ = module_evaluation.sender.send(Ok(()));
+        let _ = module_evaluation.sender.send(Ok(v8::Global::new(scope, value)));
       }
       v8::PromiseState::Rejected => {
         let exception = promise.result(scope);

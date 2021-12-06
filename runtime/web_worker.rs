@@ -523,7 +523,7 @@ impl WebWorker {
         // If `None` is returned it means that runtime was destroyed before
         // evaluation was complete. This can happen in Web Worker when `self.close()`
         // is called at top level.
-        maybe_result.unwrap_or(Ok(()))
+        maybe_result.map(|result| result.map(std::mem::drop)).unwrap_or(Ok(()))
       }
 
       event_loop_result = self.run_event_loop(false) => {
@@ -532,7 +532,7 @@ impl WebWorker {
         }
         event_loop_result?;
         let maybe_result = receiver.await;
-        maybe_result.unwrap_or(Ok(()))
+        maybe_result.map(|result| result.map(std::mem::drop)).unwrap_or(Ok(()))
       }
     }
   }
